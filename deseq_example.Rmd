@@ -1,0 +1,83 @@
+---
+title: "deseq example"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# install
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("DESeq2")
+
+# load
+library(DESeq2)
+
+library(rWSBIM2122)
+
+load(system.file("extdata/deseq2/counts.rda",
+                  package = "rWSBIM2122"))
+load(system.file("extdata/deseq2/coldata.rda",
+                  package = "rWSBIM2122"))
+```
+
+# Import data
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = counts,
+                              colData = coldata,
+                              design = ~ Condition)
+
+# View counts matrix
+counts(dds)
+
+# View sample table
+colData(dds)
+```
+
+# Subset
+```{r}
+# choose first 5 genes
+dds[1:5, ]
+
+# choose first 3 samples
+dds[ ,1:3]
+
+# only keep samples that belong to "mock" condition
+dds[ ,dds$Condition == "mock"]
+```
+
+# Visualize
+```{r}
+vsd <- vst(dds, blind=FALSE)
+rld <- rlog(dds, blind=FALSE)
+
+plotPCA(vsd, intgroup = "Condition")
+plotPCA(rld, intgroup = "Condition")
+```
+
+# Differential Expression
+```{r}
+dds <- DESeq(dds)
+
+results(dds)
+
+res <- results(
+          dds, 
+          contrast = c("Condition", "KD", "mock")
+          )
+
+mcols(res)$description
+```
+
+# Log fold change shrinkage
+```{r}
+res_shrunk <- lfcShrink(dds, 
+                        coef = 2,
+                        type = "apeglm") 
+
+plotMA(res)
+plotMA(res_shrunk)
+```
+
